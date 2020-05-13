@@ -2,3 +2,4 @@
 .npmrc
 styles
 node_modules
+.figma-config.json

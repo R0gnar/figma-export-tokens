@@ -1,16 +1,19 @@
 {
   "name": "@mtgame/figma-export-tokens",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Export design tokens from figma api",
   "main": "index.js",
   "scripts": {
-    "generate-tokens": "node index.js"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "Dmitry Lysenkov",
+  "author": "Dmitry Lysenkov <dmlysenkov@mtgame.ru>",
   "license": "ISC",
   "dependencies": {
-    "axios": "^0.19.2"
+    "axios": "^0.19.2",
+    "chalk": "^4.0.0",
+    "ora": "^4.0.4",
+    "prompts": "^2.3.2"
   },
   "devDependencies": {},
   "repository": {
@@ -20,5 +23,8 @@
   "bugs": {
     "url": "https://github.com/R0gnar/figma-export-tokens/issues"
   },
-  "homepage": "https://github.com/R0gnar/figma-export-tokens#readme"
+  "homepage": "https://github.com/R0gnar/figma-export-tokens#readme",
+  "bin": {
+    "figma-export-tokens": "./cli.js"
+  }
 }
