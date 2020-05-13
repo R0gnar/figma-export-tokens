@@ -1,0 +1,16 @@
+{
+  "name": "@mtgame/figma-export-tokens",
+  "version": "1.0.0",
+  "description": "Export design tokens from figma api",
+  "main": "index.js",
+  "scripts": {
+    "generate-tokens": "node index.js"
+  },
+  "keywords": [],
+  "author": "Dmitry Lysenkov",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.19.2"
+  },
+  "devDependencies": {}
+}
