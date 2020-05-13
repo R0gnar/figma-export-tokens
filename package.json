@@ -12,5 +12,13 @@
   "dependencies": {
     "axios": "^0.19.2"
   },
-  "devDependencies": {}
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/R0gnar/figma-export-tokens.git"
+  },
+  "bugs": {
+    "url": "https://github.com/R0gnar/figma-export-tokens/issues"
+  },
+  "homepage": "https://github.com/R0gnar/figma-export-tokens#readme"
 }
