@@ -2,7 +2,7 @@ const fs = require('fs');
 const FigmaApi = require('./src/figma-api');
 
 const config = {
-    token: '41734-45a6553c-9f06-4e99-88a9-6880652fd846',
+    token: '',
     file: '1iup5ZTDwC58vRUVwMO9a8',
     pageName: 'Page 1',
     colorPrefix: 'Color',
