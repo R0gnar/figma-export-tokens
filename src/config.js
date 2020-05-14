@@ -4,13 +4,14 @@ const prompts = require('prompts');
 const configFileName = '.figma-config.json';
 const defaults = {
     token: '',
-    file: '1iup5ZTDwC58vRUVwMO9a8',
+    file: '',
     page: 'Page 1',
     colorPrefix: 'Color',
     fontPrefix: 'Font',
     spacingPrefix: 'Spacing',
-    borderRadiusPrefix: 'Border radius',
+    borderRadiusPrefix: 'Radius',
     borderPrefix: 'Stroke',
+    shadowPrefix: 'Style',
     tokensFilePath: 'styles/_tokens.scss'
 };
 
@@ -67,9 +68,16 @@ const configList = [
     {
         type: 'text',
         name: 'borderPrefix',
-        message: 'Border prefix',
+        message: 'Border prefix:',
         validate: value => value === '' ? 'Enter border prefix' : true,
         initial: defaults.borderPrefix,
+    },
+    {
+        type: 'text',
+        name: 'shadowPrefix',
+        message: 'Shadow prefix:',
+        validate: value => value === '' ? 'Enter shadow prefix' : true,
+        initial: defaults.shadowPrefix,
     },
     {
         type: 'text',

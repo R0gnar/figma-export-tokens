@@ -46,8 +46,10 @@ function run() {
                     data.push(getBorderData(item));
                 } else if (type === config.borderRadiusPrefix) {
                     data.push(getBorderRadiusData(item));
-                } if (type === config.fontPrefix) {
+                } else if (type === config.fontPrefix) {
                     data.push(getFontData(item));
+                } else if (type === config.shadowPrefix) {
+                    data.push(getShadowData(item));
                 }
             });
             data = data.sort((a, b) => a.ordering - b.ordering);
@@ -86,7 +88,7 @@ function getColorData(node) {
         ordering: 1,
         type: TYPE_VARIABLE,
         name: formatName(node.name),
-        value: getRgbColor(node.fills[0].color)
+        value: getColor(node)
     };
 }
 
@@ -117,10 +119,19 @@ function getBorderRadiusData(node) {
     };
 }
 
+function getShadowData(node) {
+    return {
+        ordering: 5,
+        type: TYPE_VARIABLE,
+        name: formatName(node.name),
+        value: getShadow(node)
+    }
+}
+
 function getFontData(node) {
     const items = [{
         name: 'font',
-        value: `${node.style.fontWeight} ${+node.style.fontSize}px/${+node.style.lineHeightPx}px ${node.style.fontFamily}`
+        value: `${node.style.fontWeight} ${Math.round(node.style.fontSize)}px/${Math.round(node.style.lineHeightPx)}px ${node.style.fontFamily}`
     }];
     if (node.style.letterSpacing) {
         items.push({
@@ -141,7 +152,7 @@ function getFontData(node) {
         });
     }
     return {
-        ordering: 5,
+        ordering: 6,
         type: TYPE_MIXIN,
         name: formatName(node.name),
         value: items
@@ -158,14 +169,31 @@ function formatName(name) {
         .toLowerCase()
 }
 
-function getRgbColor(rgb) {
+function getColor(node) {
+    const fill = node.fills[0];
+    const rgb = fill.color;
+    if (fill.opacity && fill.opacity < 1) {
+        rgb.a = fill.opacity;
+    }
+    if (rgb.a < 1) {
+        return getRgbaColor(rgb);
+    }
     return `#${componentToHex(255 * rgb.r)}${componentToHex(255 * rgb.g)}${componentToHex(255 * rgb.b)}`;
+}
+
+function getRgbaColor(rgba) {
+    return `rgba(${Math.round(255 * rgba.r)}, ${Math.round(255 * rgba.g)}, ${Math.round(255 * rgba.b)}, ${Math.round(100 * rgba.a) / 100})`;
 }
 
 function componentToHex(c) {
     c = Math.round(c);
     const hex = c.toString(16);
     return hex.length === 1 ? `0${hex}` : hex;
+}
+
+function getShadow(node) {
+    const effect = node.effects[0];
+    return `${+effect.offset.x}px ${+effect.offset.y}px ${+effect.radius}px ${getRgbaColor(effect.color)}`;
 }
 
 function createMixin(name, value, deleted = false) {

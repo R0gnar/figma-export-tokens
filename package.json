@@ -1,6 +1,6 @@
 {
   "name": "@mtgame/figma-export-tokens",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Export design tokens from figma api",
   "main": "index.js",
   "scripts": {
