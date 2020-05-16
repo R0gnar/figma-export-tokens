@@ -23,39 +23,43 @@ const textCaseMapping = {
     TITLE: 'capitalize'
 };
 
-function run() {
-    getConfig().then(config => {
-        const client = FigmaApi(config.token);
-        spinner.start('Fetching Figma file');
-        client.getFile(config.file).then(result => {
-            spinner.succeed();
-            const page = result.document.children.find(c => c.name === config.page);
-            if (!page) {
-                console.log(chalk.red.bold(`Page ${config.page} not found`));
-                return;
-            }
-            let data = [];
-            page.children.forEach(item => {
-                const nameParts = item.name.split('/');
-                const type = nameParts[0].trim();
-                if (type === config.colorPrefix) {
-                    data.push(getColorData(item));
-                } else if (type === config.spacingPrefix) {
-                    data.push(getSpacingData(item));
-                } else if (type === config.borderPrefix) {
-                    data.push(getBorderData(item));
-                } else if (type === config.borderRadiusPrefix) {
-                    data.push(getBorderRadiusData(item));
-                } else if (type === config.fontPrefix) {
-                    data.push(getFontData(item));
-                } else if (type === config.shadowPrefix) {
-                    data.push(getShadowData(item));
-                }
-            });
-            data = data.sort((a, b) => a.ordering - b.ordering);
-            writeTokens(data, config.tokensFilePath);
-        });
-    }).catch(error => console.log(error));
+async function run() {
+    const config = await getConfig();
+    const client = FigmaApi(config.token);
+    spinner.start('Fetching Figma file pages');
+    const pages = await client.getFile(config.file, {depth: 1});
+    spinner.succeed();
+    const page = pages.document.children.find(c => c.name === config.page);
+    if (!page) {
+        console.log(chalk.red.bold(`Page ${config.page} not found`));
+        return;
+    }
+    spinner.start('Fetching Figma file tokens');
+    const pageData = await client.getFile(config.file, {ids: page.id, depth: 2});
+    spinner.succeed();
+    const elements = pageData.document.children.find(c => c.id === page.id).children;
+    let data = [];
+    elements.forEach(item => {
+        const nameParts = item.name.split('/');
+        const type = nameParts[0].trim();
+        if (type === config.colorPrefix) {
+            data.push(getColorData(item));
+        } else if (type === config.sizePref) {
+            data.push(getSizeData(item));
+        } else if (type === config.spacingPrefix) {
+            data.push(getSpacingData(item));
+        } else if (type === config.borderPrefix) {
+            data.push(getBorderData(item));
+        } else if (type === config.borderRadiusPrefix) {
+            data.push(getBorderRadiusData(item));
+        } else if (type === config.fontPrefix) {
+            data.push(getFontData(item));
+        } else if (type === config.shadowPrefix) {
+            data.push(getShadowData(item));
+        }
+    });
+    data = data.sort((a, b) => a.ordering - b.ordering);
+    writeTokens(data, config.tokensFilePath);
 }
 
 function writeTokens(data, filePath) {
@@ -92,7 +96,7 @@ function getColorData(node) {
     };
 }
 
-function getSpacingData(node) {
+function getSizeData(node) {
     return {
         ordering: 2,
         type: TYPE_VARIABLE,
@@ -101,9 +105,18 @@ function getSpacingData(node) {
     };
 }
 
-function getBorderData(node) {
+function getSpacingData(node) {
     return {
         ordering: 3,
+        type: TYPE_VARIABLE,
+        name: formatName(node.name),
+        value: `${+node.absoluteBoundingBox.height}px`
+    };
+}
+
+function getBorderData(node) {
+    return {
+        ordering: 4,
         type: TYPE_VARIABLE,
         name: formatName(node.name),
         value: `${+node.strokeWeight}px`
@@ -112,7 +125,7 @@ function getBorderData(node) {
 
 function getBorderRadiusData(node) {
     return {
-        ordering: 4,
+        ordering: 5,
         type: TYPE_VARIABLE,
         name: formatName(node.name),
         value: `${+node.cornerRadius}px`
@@ -121,7 +134,7 @@ function getBorderRadiusData(node) {
 
 function getShadowData(node) {
     return {
-        ordering: 5,
+        ordering: 6,
         type: TYPE_VARIABLE,
         name: formatName(node.name),
         value: getShadow(node)
@@ -152,7 +165,7 @@ function getFontData(node) {
         });
     }
     return {
-        ordering: 6,
+        ordering: 7,
         type: TYPE_MIXIN,
         name: formatName(node.name),
         value: items
@@ -218,4 +231,11 @@ function createVariable(name, value, deleted = false) {
     return str;
 }
 
-run();
+function main() {
+    run().then().catch(err => {
+        console.error('Error: ', err);
+        spinner.fail();
+    })
+}
+
+main();

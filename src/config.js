@@ -8,9 +8,10 @@ const defaults = {
     page: 'Page 1',
     colorPrefix: 'Color',
     fontPrefix: 'Font',
+    sizePrefix: 'Size',
     spacingPrefix: 'Spacing',
     borderRadiusPrefix: 'Radius',
-    borderPrefix: 'Stroke',
+    borderPrefix: 'Border',
     shadowPrefix: 'Style',
     tokensFilePath: 'styles/_tokens.scss'
 };
@@ -50,6 +51,13 @@ const configList = [
         message: 'Font prefix:',
         validate: value => value === '' ? 'Enter font prefix' : true,
         initial: defaults.fontPrefix,
+    },
+    {
+        type: 'text',
+        name: 'sizePrefix',
+        message: 'Size prefix:',
+        validate: value => value === '' ? 'Enter size prefix' : true,
+        initial: defaults.sizePrefix,
     },
     {
         type: 'text',

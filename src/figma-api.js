@@ -15,8 +15,12 @@ const FigmaApi = (token) => {
     });
 
     return {
-        getFile: (fileId) => {
-            return instance.get(`/files/${fileId}`).then(response => response.data);
+        getFile: async (fileId, params) => {
+            const query =[];
+            for (const key of Object.keys(params)) {
+                query.push(`${key}=${params[key]}`);
+            }
+            return await instance.get(`/files/${fileId}?${query.join('&')}`).then(response => response.data);
         }
     }
 };
