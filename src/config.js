@@ -1,11 +1,12 @@
 const fs = require('fs');
 const prompts = require('prompts');
+const path = require('path');
 
 const configFileName = '.figma-config.json';
 const defaults = {
     token: '',
     file: '',
-    page: 'Page 1',
+    tokensPage: 'Page 1',
     colorPrefix: 'Color',
     fontPrefix: 'Font',
     sizePrefix: 'Size',
@@ -33,10 +34,10 @@ const configList = [
     },
     {
         type: 'text',
-        name: 'page',
+        name: 'tokensPage',
         message: 'Figma page name:',
         validate: value => value === '' ? 'Enter page name' : true,
-        initial: defaults.page,
+        initial: defaults.tokensPage,
     },
     {
         type: 'text',
@@ -125,6 +126,20 @@ function getPromptData(list) {
 
 function saveConfig(config) {
     fs.writeFileSync(configFileName, JSON.stringify(config, null, 2));
+    updateGitIgnore();
+}
+
+function updateGitIgnore() {
+    const gitignoreFilePath = path.resolve('.gitignore');
+    if (!fs.existsSync(gitignoreFilePath)) {
+        fs.writeFileSync(gitignoreFilePath, `${configFileName}\n`);
+        return;
+    }
+    const content = fs.readFileSync(gitignoreFilePath, 'utf-8');
+    const elements = content.split('\n');
+    if (elements.indexOf(configFileName) < 0) {
+        fs.writeFileSync(gitignoreFilePath, content + '\n' + configFileName + '\n')
+    }
 }
 
 module.exports = getConfig;

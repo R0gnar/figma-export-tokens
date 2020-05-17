@@ -29,7 +29,7 @@ async function run() {
     spinner.start('Fetching Figma file pages');
     const pages = await client.getFile(config.file, {depth: 1});
     spinner.succeed();
-    const page = pages.document.children.find(c => c.name === config.page);
+    const page = pages.document.children.find(c => c.name === config.tokensPage);
     if (!page) {
         console.log(chalk.red.bold(`Page ${config.page} not found`));
         return;
@@ -44,7 +44,7 @@ async function run() {
         const type = nameParts[0].trim();
         if (type === config.colorPrefix) {
             data.push(getColorData(item));
-        } else if (type === config.sizePref) {
+        } else if (type === config.sizePrefix) {
             data.push(getSizeData(item));
         } else if (type === config.spacingPrefix) {
             data.push(getSpacingData(item));
@@ -64,6 +64,9 @@ async function run() {
 
 function writeTokens(data, filePath) {
     const dirname = path.dirname(filePath);
+    if (!fs.existsSync(dirname)) {
+        fs.mkdirSync(dirname, {recursive: true});
+    }
     const basename = path.basename(filePath, '.scss');
     const jsonFile = path.join(dirname, `.${basename}.json`);
     if (fs.existsSync(jsonFile)) {
