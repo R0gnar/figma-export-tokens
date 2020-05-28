@@ -193,7 +193,7 @@ function getFontData(node, fontFamilyBase) {
     }
     const items = [{
         name: 'font',
-        value: `$${mixinName}-font-weight $${mixinName}-line-height/$${mixinName}-line-height $${fontFamily}`
+        value: `$${mixinName}-font-weight #{$${mixinName}-line-height}/#{$${mixinName}-line-height} $${fontFamily}`
     }];
     if (node.style.letterSpacing) {
         const name = `${mixinName}-letter-spacing`;
