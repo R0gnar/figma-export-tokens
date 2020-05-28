@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const ora = require('ora');
 const chalk = require('chalk');
+const prompts = require('prompts');
 const getConfig = require('./src/config');
 const FigmaApi = require('./src/figma-api');
 
@@ -29,9 +30,11 @@ async function run() {
     spinner.start('Fetching Figma file pages');
     const pages = await client.getFile(config.file, {depth: 1});
     spinner.succeed();
-    const page = pages.document.children.find(c => c.name === config.tokensPage);
+
+    const removeEmoji = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/gi;
+    const page = pages.document.children.find(c => c.name.replace(removeEmoji, '') === config.tokensPage);
     if (!page) {
-        console.log(chalk.red.bold(`Page ${config.page} not found`));
+        console.log(chalk.red.bold(`Page ${config.tokensPage} not found`));
         return;
     }
     spinner.start('Fetching Figma file tokens');
@@ -39,8 +42,27 @@ async function run() {
     spinner.succeed();
     const elements = pageData.document.children.find(c => c.id === page.id).children;
     let data = [];
+    const fontFamilies = {};
     elements.forEach(item => {
-        const nameParts = item.name.split('/');
+        const nameParts = item.name.split('-');
+        const type = nameParts[0].trim();
+        if (type === config.fontPrefix) {
+            if (!fontFamilies[item.style.fontFamily]) {
+                fontFamilies[item.style.fontFamily] = 0;
+            }
+            fontFamilies[item.style.fontFamily]++;
+        }
+    });
+    const fontFamilyBase = Object.keys(fontFamilies)
+        .sort((a, b) => fontFamilies[a] > fontFamilies[b] ? -1 : 1)[0];
+    data.push({
+        ordering: 7,
+        type: TYPE_VARIABLE,
+        name: 'font-family-base',
+        value: fontFamilyBase
+    });
+    elements.forEach(item => {
+        const nameParts = item.name.split('-');
         const type = nameParts[0].trim();
         if (type === config.colorPrefix) {
             data.push(getColorData(item));
@@ -53,39 +75,49 @@ async function run() {
         } else if (type === config.borderRadiusPrefix) {
             data.push(getBorderRadiusData(item));
         } else if (type === config.fontPrefix) {
-            data.push(getFontData(item));
+            data = data.concat(getFontData(item, fontFamilyBase));
         } else if (type === config.shadowPrefix) {
             data.push(getShadowData(item));
         }
     });
-    data = data.sort((a, b) => a.ordering - b.ordering);
-    writeTokens(data, config.tokensFilePath);
+    data = data.sort((a, b) => a.ordering === b.ordering ? a.name > b.name ? 1 : -1 : a.ordering - b.ordering);
+    writeTokens(data, config.tokensFilePath, config.default);
 }
 
-function writeTokens(data, filePath) {
+function writeTokens(data, filePath, defaultAttr) {
     const dirname = path.dirname(filePath);
     if (!fs.existsSync(dirname)) {
         fs.mkdirSync(dirname, {recursive: true});
     }
     const basename = path.basename(filePath, '.scss');
     const jsonFile = path.join(dirname, `.${basename}.json`);
+    let oldData = []
     if (fs.existsSync(jsonFile)) {
-        let oldData = JSON.parse(fs.readFileSync(jsonFile, 'utf-8'));
+        oldData = JSON.parse(fs.readFileSync(jsonFile, 'utf-8'));
         const dataVariables = data.map(item => item.name);
         oldData = oldData.filter(item => dataVariables.indexOf(item.name) === -1)
             .map(item => ({...item, deleted: true}));
-        data = [...data, ...oldData];
     }
-    fs.writeFileSync(jsonFile, JSON.stringify(data, null, 2));
-    fs.writeFileSync(filePath, getScssTokens(data));
+    const promtsList = oldData.map(item => ({
+        type: 'confirm',
+        name: item.name,
+        message: `${item.name} was deleted. Keep style in scss tokens?`
+    }));
+
+    prompts(promtsList, {onCancel: () => process.exit(1)}).then(result => {
+        oldData = oldData.filter(item => result[item.name]);
+        data = [...data, ...oldData];
+        fs.writeFileSync(jsonFile, JSON.stringify(data, null, 2));
+        fs.writeFileSync(filePath, getScssTokens(data, defaultAttr));
+    });
 }
 
-function getScssTokens(data) {
+function getScssTokens(data, defaultAttr) {
     return data.map(item => {
         if (item.type === TYPE_VARIABLE) {
-            return createVariable(item.name, item.value, item.deleted);
+            return createVariable(item.name, item.value, item.deleted, defaultAttr);
         } else if (item.type === TYPE_MIXIN) {
-            return createMixin(item.name, item.value, item.deleted);
+            return createMixin(item.name, item.value, item.deleted, defaultAttr);
         }
     }).join('\n') + '\n';
 }
@@ -144,35 +176,65 @@ function getShadowData(node) {
     }
 }
 
-function getFontData(node) {
+function getFontData(node, fontFamilyBase) {
+    const mixinName = formatName(node.name);
+    const variables = [
+        {name: `${mixinName}-font-weight`, value: node.style.fontWeight || 500},
+        {name: `${mixinName}-font-size`, value: `${Math.round(node.style.fontSize)}px`},
+        {name: `${mixinName}-line-height`, value: `${Math.round(node.style.lineHeightPx)}px`}
+    ];
+    let fontFamily = 'font-family-base';
+    if (node.style.fontFamily !== fontFamilyBase) {
+        fontFamily = `${mixinName}-font-family`;
+        variables.push({
+            name: fontFamily,
+            value: node.style.fontFamily
+        });
+    }
     const items = [{
         name: 'font',
-        value: `${node.style.fontWeight} ${Math.round(node.style.fontSize)}px/${Math.round(node.style.lineHeightPx)}px ${node.style.fontFamily}`
+        value: `$${mixinName}-font-weight $${mixinName}-line-height/$${mixinName}-line-height $${fontFamily}`
     }];
     if (node.style.letterSpacing) {
+        const name = `${mixinName}-letter-spacing`;
+        variables.push({
+            name,
+            value: `${+node.style.letterSpacing}px`
+        });
         items.push({
             name: 'letter-spacing',
-            value: `${+node.style.letterSpacing}px`
+            value: `$${name}`
         });
     }
     if (textCaseMapping[node.style.textCase]) {
+        const name = `${mixinName}-text-transform`;
+        variables.push({
+            name: name,
+            value: textCaseMapping[node.style.textCase]
+        });
         items.push({
             name: 'text-transform',
-            value: textCaseMapping[node.style.textCase]
+            value: `$${name}`
         });
     }
     if (textDecorationMapping[node.style.textDecoration]) {
+        const name = `${mixinName}-text-decoration`;
+        variables.push({
+            name,
+            value: textDecorationMapping[node.style.textDecoration]
+        });
         items.push({
             name: 'text-decoration',
             value: textDecorationMapping[node.style.textDecoration]
         });
     }
-    return {
-        ordering: 7,
-        type: TYPE_MIXIN,
-        name: formatName(node.name),
-        value: items
-    };
+    return variables.map(item => ({...item, ordering: 7, type: TYPE_VARIABLE}))
+        .concat([{
+            ordering: 7.5,
+            type: TYPE_MIXIN,
+            name: formatName(node.name),
+            value: items
+        }]);
 }
 
 
@@ -225,12 +287,12 @@ function createMixin(name, value, deleted = false) {
     return str;
 }
 
-function createVariable(name, value, deleted = false) {
+function createVariable(name, value, deleted = false, defaultAttr = false) {
     let str = '';
     if (deleted) {
         str += '/** @deprecated */\n';
     }
-    str += `$${name}: ${value};`;
+    str += `$${name}: ${value}${defaultAttr ? '!default' : ''};`;
     return str;
 }
 

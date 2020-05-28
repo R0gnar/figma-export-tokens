@@ -14,7 +14,8 @@ const defaults = {
     borderRadiusPrefix: 'Radius',
     borderPrefix: 'Border',
     shadowPrefix: 'Style',
-    tokensFilePath: 'styles/_tokens.scss'
+    tokensFilePath: 'styles/_tokens.scss',
+    default: false
 };
 
 const configList = [
@@ -94,6 +95,12 @@ const configList = [
         message: 'Tokens file path:',
         validate: value => value === '' ? 'Enter tokens file path' : true,
         initial: defaults.tokensFilePath
+    },
+    {
+        type: 'confirm',
+        name: 'default',
+        message: 'Add default attr',
+        initial: defaults.default
     }
 ];
 
